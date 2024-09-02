@@ -6,6 +6,21 @@ import {ApiResponse}  from "../utils/Apiresponse.js"
 import mongoose from "mongoose"
 import CircularJSON from 'circular-json';
 
+
+
+
+
+const generateAccessToeknandRefreshTokens=async(userId)=>{
+  try{
+  const user=await User.findById(userId)
+ const accesstoekn= user.generateAccessToekn()
+ const refreshToken=user.generateRefreshToekn()
+  }
+
+  catch(error){
+    throw ApiError(500,"Something went wrong whiel generating refresh and access")
+  }
+}
 const registerUser=asyncHandler(async(req,res)=>{
    const {fullname,username,password,email} =req.body;
    console.log("email",email)
@@ -25,9 +40,10 @@ const registerUser=asyncHandler(async(req,res)=>{
   }
 
  const avatarLocalPath=req.files?.avatar?.[0]?.path;
- console.log(avatarLocalPath)
+ console.log("avatr",avatarLocalPath)
 
-//  const coverImagepath=req.files?.coverImage?.[0]?.path;
+//  const coverImageLocalPath=req.files?.coverImage?.[0]?.path;
+//  console.log("localcover",coverImageLocalPath)
 let coverImageLocalPath;
     if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
         coverImageLocalPath = req.files.coverImage[0].path
@@ -40,13 +56,13 @@ let coverImageLocalPath;
 const avatar=await uploadcloundinary(avatarLocalPath)
 const coverImage=await uploadcloundinary(coverImageLocalPath)
 console.log("coverumage",coverImage?.url)
-// if(!avatar){
-//     throw new ApiError(400,"Avatar file is required")
-// }
+if(!avatar){
+    throw new ApiError(400,"Avatar file is required")
+}
 
 
 const user=await User.create({fullname,
- 
+ avatar:avatar?.url,
    coverImage:coverImage?.url || "",
     email,password
     ,username:username.toLowerCase()
@@ -60,6 +76,27 @@ const user=await User.create({fullname,
  return res.status(201).json(
     new ApiResponse(200,CircularJSON.stringify(createduser),"user registered Succefully")
  )
+})
+const loginuser=asyncHandler(async(req,res)=>{
+   const {username,email,password}=req.body;
+   if(!username || !email){
+    throw ApiError(400,"username or passqord is required")
+
+   }
+
+  const user= await User.findOne({
+    $or:[{username},{email}]
+   })
+
+   if(!user){
+    throw ApiError(404,"User does not register");
+   }
+   const isPasswordvalid=await user.isPasswordCorrect(password)
+   if(!isPasswordvalid){
+    throw ApiError(401,"Invalid user credentils");
+   }
+
+
 })
 
 export {registerUser}

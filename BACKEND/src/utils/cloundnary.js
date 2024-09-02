@@ -11,7 +11,7 @@ cloudinary.config({
   
 });
 console.log("name",process.env.CLOUDINARY_CLOUD_NAME)
-const uploadcloundinary = async (localFilePath) => {
+const uploadcloundinary = async(localFilePath) => {
     try {
         if (!localFilePath) return null;
 
