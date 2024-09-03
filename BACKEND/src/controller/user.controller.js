@@ -13,8 +13,12 @@ import CircularJSON from 'circular-json';
 const generateAccessToeknandRefreshTokens=async(userId)=>{
   try{
   const user=await User.findById(userId)
- const accesstoekn= user.generateAccessToekn()
+ const accesstoekn= user.generateAccessToekn() 
  const refreshToken=user.generateRefreshToekn()
+ user.refreshToken=refreshToken
+ await user.save({validateBeforeSave:false})
+
+ return {accesstoekn,refreshToken}
   }
 
   catch(error){
@@ -93,10 +97,36 @@ const loginuser=asyncHandler(async(req,res)=>{
    }
    const isPasswordvalid=await user.isPasswordCorrect(password)
    if(!isPasswordvalid){
-    throw ApiError(401,"Invalid user credentils");
+    throw ApiError(401,"Invalid user credentils");}
+
+    const {accesstoekn,refreshToken} =await generateAccessToeknandRefreshTokens(user._id)
+    const  loggedInUser=await User.findById(user._id).select("-password -refreshToken")
+
+    const option={
+      httpOnly:true,
+      secure:true
+
+    }
+    return res.status(200)
+    .cookie("accessToken",accesstoekn,option)
+    .cookie("refreshToen",refreshToken,option)
+    .json(
+      new ApiError(
+         200,
+         {
+            user:loggedInUser,accesstoekn,refreshToken
+         },
+         "user logged in succcessfully"
+      )
+    )
+       
    }
 
 
+)
+
+const logoutUser=asyncHandler(async (req,res)=>{
+   
 })
 
-export {registerUser}
+export {registerUser,loginuser,logoutUser}
