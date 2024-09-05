@@ -13,8 +13,11 @@ import CircularJSON from 'circular-json';
 const generateAccessToeknandRefreshTokens=async(userId)=>{
   try{
   const user=await User.findById(userId)
+
  const accesstoekn= user.generateAccessToekn() 
+ console.log("...........",accesstoekn)
  const refreshToken=user.generateRefreshToekn()
+ console.log("..reffef.........",refreshToken)
  user.refreshToken=refreshToken
  await user.save({validateBeforeSave:false})
 
@@ -81,10 +84,14 @@ const user=await User.create({fullname,
     new ApiResponse(200,CircularJSON.stringify(createduser),"user registered Succefully")
  )
 })
+
+
+
+
 const loginuser=asyncHandler(async(req,res)=>{
    const {username,email,password}=req.body;
-   if(!username || !email){
-    throw ApiError(400,"username or passqord is required")
+   if(!(username || email)){
+    throw new ApiError(400,"username or password is required")
 
    }
 
@@ -93,11 +100,12 @@ const loginuser=asyncHandler(async(req,res)=>{
    })
 
    if(!user){
-    throw ApiError(404,"User does not register");
+    throw  new ApiError(404,"User does not register");
    }
    const isPasswordvalid=await user.isPasswordCorrect(password)
+   
    if(!isPasswordvalid){
-    throw ApiError(401,"Invalid user credentils");}
+    throw new ApiError(401,"Invalid user credentils");}
 
     const {accesstoekn,refreshToken} =await generateAccessToeknandRefreshTokens(user._id)
     const  loggedInUser=await User.findById(user._id).select("-password -refreshToken")
@@ -108,8 +116,8 @@ const loginuser=asyncHandler(async(req,res)=>{
 
     }
     return res.status(200)
-    .cookie("accessToken",accesstoekn,option)
-    .cookie("refreshToen",refreshToken,option)
+    .cookie("accesstokn",accesstoekn,option)
+    .cookie("refreshToken",refreshToken,option)
     .json(
       new ApiError(
          200,
@@ -126,6 +134,28 @@ const loginuser=asyncHandler(async(req,res)=>{
 )
 
 const logoutUser=asyncHandler(async (req,res)=>{
+  
+ await User.findByIdAndUpdate(
+   req.user._id,
+   {
+      $set:{
+         refreshToken:undefined
+      }
+   },
+   {
+      new :true
+   }
+ )
+ const option={
+   httpOnly:true,
+   secure:true
+
+ }
+ return res 
+ .status(200)
+ .clearCookie("accesstoekn",option)
+ .clearCookie("refreshToken",option)
+ .json(new ApiError(200,{},"User Logged out"))
    
 })
 
