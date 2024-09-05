@@ -5,7 +5,7 @@ import {uploadcloundinary } from "../utils/cloundnary.js"
 import {ApiResponse}  from "../utils/Apiresponse.js"
 import mongoose from "mongoose"
 import CircularJSON from 'circular-json';
-
+import jwt from "jsonwebtoken"
 
 
 
@@ -90,7 +90,7 @@ const user=await User.create({fullname,
 
 const loginuser=asyncHandler(async(req,res)=>{
    const {username,email,password}=req.body;
-   if(!(username || email)){
+   if(!username && !email){
     throw new ApiError(400,"username or password is required")
 
    }
@@ -159,4 +159,46 @@ const logoutUser=asyncHandler(async (req,res)=>{
    
 })
 
-export {registerUser,loginuser,logoutUser}
+const refreshAccessToeken=asyncHandler(async(req,res)=>{
+   const incomingrefreshtoken=req.cookies.refreshToken || req.body.refreshToken
+
+   if(!incomingrefreshtoken){
+      throw new ApiError(401,"Unaithorized request")
+   }
+ try {
+    const decodedtoken= jwt.verify(incomingrefreshtoken,
+        process.env.REFRESH_TOKEN_SECRET)
+  
+      const user= await User.findById(decodedtoken?._id);
+      if(!user){
+        throw new ApiError(401,"Invalid refresh token")
+      }
+      if(incomingrefreshtoken!==user?.refreshToken){
+        throw new ApiError(401,"refresh token is expired or used")
+      }
+  
+      const option={
+        httpOnly:true,
+        secure:true
+      }
+  
+  
+   const {accesstoekn,newrefreshToken}=  await generateAccessToeknandRefreshTokens(user._id)
+     return res.status(200)
+     .cookie("accesstokn",accesstoekn,option)
+     .cookie("refreshToken",newrefreshToken,option)
+     .json( new ApiResponse(
+        200,
+        {
+           accesstoekn,refreshToken:newrefreshToken
+        },
+        "Acess toekn refreshed"
+     ))
+ } catch (error) {
+   throw ApiError(401,error?.message || "Invalid refreh token")
+ }
+})
+
+
+
+export {registerUser,loginuser,logoutUser,refreshAccessToeken}
