@@ -6,6 +6,7 @@ import {ApiResponse}  from "../utils/Apiresponse.js"
 import mongoose from "mongoose"
 import CircularJSON from 'circular-json';
 import jwt from "jsonwebtoken"
+import { response } from "express"
 
 
 
@@ -200,5 +201,95 @@ const refreshAccessToeken=asyncHandler(async(req,res)=>{
 })
 
 
+const changeCurrentpassword=asyncHandler(async(req,res)=>{
+const {oldpassword,newpassword}=req.body
+const user=await User.findById(req.user?._id)
+const isPasswordCorrect=await user.isPasswordCorrectt(oldpassword)
+if(!isPasswordCorrect){
+   throw ApiError(404,"Invalid old  Passowrd")
+}
+user.password=newpassword
+await user.save({validateBeforeSave:false})
+return res.status(200)
+.json(new ApiResponse(200,{},"su"))
 
-export {registerUser,loginuser,logoutUser,refreshAccessToeken}
+})
+
+const getcurrentuser=asyncHandler(async(req,res)=>{
+   return res
+   .status(200)
+   .json(200,req.user,"current user fectched successfully")
+
+})
+const upadteAccountDetail=asyncHandler(async(req,res)=>{
+   const {fullname,email,}=req.body
+   if(!fullname || !email){
+      throw new ApiError(400,"All fileds required ")
+
+   }
+  const user= await User.findByIdAndUpdate(req.user?._id,
+      {$set:{
+         fullname,
+         email:email
+      }},
+      {new:true}
+   ).select("-password")
+   return res.status(200)
+   .json( new ApiResponse(200,user,"Account details update successfully"))
+})
+
+
+const updateUseravatar=asyncHandler(async(req,res)=>{
+   const avatarlocalpath=req.file?.path
+   if(!avatarlocalpath){
+      throw new ApiError(400,"Avatar file is missing")
+    
+   }
+ const avatar=  await uploadcloundinary(avatarlocalpath)
+ if(!avatar.url){
+   throw new ApiError(400,"Error while uploading while on avatar")
+ 
+}
+const user=await User.findByIdAndUpdate(
+   req.user?._id,
+   {$set:{
+      avatar:avatar.url,
+   }},
+   {new:true}
+).select("-password")
+return res
+.status(200)
+.json(new ApiResponse(200,user,"Avatar image update successfully"))
+
+})
+
+
+const updateUsercoverImage=asyncHandler(async(req,res)=>{
+   const coverimagelocalpath=req.file?.path
+   if(!coverimagelocalpath){
+      throw new ApiError(400,"coverimage file is missing")
+    
+   }
+ const coverImage=  await uploadcloundinary(coverimagelocalpath)
+ if(!coverImage.url){
+   throw new ApiError(400,"Error while uploading while on coverimage ")
+ 
+}
+const user=await User.findByIdAndUpdate(
+   req.user?._id,
+   {$set:{
+      coverImage:coverImage.url,
+   }},
+   {new:true}
+).select("-password")
+
+return res
+.status(200)
+.json(new ApiResponse(200,user,"Cover image update successfully"))
+
+})
+export {registerUser,loginuser,
+   logoutUser,refreshAccessToeken,
+   getcurrentuser,changeCurrentpassword,
+   upadteAccountDetail,updateUseravatar,
+   updateUseravatar,updateUsercoverImage}
